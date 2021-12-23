@@ -1,4 +1,4 @@
-import { VirtualDOM } from "./interfaces";
+import { VirtualDOM } from "../types";
 
 export function updateProps(newDOM: VirtualDOM, element: any) {
   console.log(`****** updating ******`)

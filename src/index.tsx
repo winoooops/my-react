@@ -1,4 +1,6 @@
 import * as TinyReact from "./TinyReact";
+// import { Todo } from "./demo/Todo"
+import { Todos } from "./demo/Todos";
 
 
 const vDOM = (
@@ -22,10 +24,19 @@ const vDOM = (
     </div>
   </div>
 )
-console.log(vDOM)
+
 const root = document.getElementById('app')
-console.log(TinyReact.render)
-TinyReact.render(vDOM, root)
+
+function App() {
+  return (
+    <Todos />
+  )
+}
+
+
+
+TinyReact.render(<App />, root)
+// TinyReact.render(vDOM, root)
 
 
 

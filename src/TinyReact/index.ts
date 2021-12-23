@@ -1,5 +1,5 @@
-import { createElement } from './createElement'
-import { render } from './render'
+import { createElement } from './TinyReactElement/createElement'
+import { render } from './TinyReactRender/render'
 
 export {
   createElement,
