@@ -1,4 +1,6 @@
 yarn-error.log
 yarn.lock
 
-/node_modules
+.DS_STORE
+node_modules
+.vscode
