@@ -9,8 +9,13 @@ export function mountNativeElement(newDOM: VirtualDOM, container: any) {
     newElement = document.createTextNode(newDOM.props.textContent)
   } else {
     newElement = document.createElement(newDOM.type)
+    console.log(newElement)
     updateProps(newDOM, newElement)
-    newDOM.childElements?.forEach(child => mountElement(child, newElement))
+    console.log(newDOM)
+    newDOM.childElements?.forEach(child => {
+      console.log(child)
+      mountElement(child, newElement)
+    })
   }
 
   container.appendChild(newElement)

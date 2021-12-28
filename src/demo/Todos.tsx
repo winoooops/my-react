@@ -9,13 +9,34 @@ export class Todos extends React.Component {
   constructor(props: any) {
     super(props)
   }
+
+  state = {
+    todoList: [
+      {
+        name: 'createElement',
+        isComplete: true
+      },
+      {
+        name: 'render',
+        isComplete: true,
+      },
+      {
+        name: 'component rendering',
+        isComplete: false,
+      }
+    ]
+  }
+
   render() {
+    // console.log(this)
+    console.log(this.state)
     console.log(TinyReact)
+    const todoList = this.state.todoList.map(task => (
+      <Todo taskName={task.name} isComplete={task.isComplete} />
+    ))
     return (
       <div>
-        <Todo taskName="createElement" />
-        <Todo taskName="render" />
-        <Todo taskName="component rendering" />
+        {todoList}
       </div >
     )
   }

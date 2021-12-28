@@ -3,8 +3,8 @@ import { VirtualDOM } from "../types";
 export function updateProps(newDOM: VirtualDOM, element: any) {
   console.log(`****** updating ******`)
   console.log(newDOM)
-  const props = newDOM.props
-  Object.keys(props).forEach(propName => {
+  const props = newDOM?.props
+  props && Object.keys(props).forEach(propName => {
     if (propName === 'children') return
 
     const propValue = props[propName]
