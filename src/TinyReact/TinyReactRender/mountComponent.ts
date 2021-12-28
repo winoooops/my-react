@@ -41,11 +41,12 @@ export function makeClassComponent(dom: VirtualDOM) {
   // 创造新的类实例
   const props = dom.props
   const component = new dom.type(props || {})
-  console.log(component)
-  const { render } = component
+  // 直接从实例里面调用
+  return component.render()
   // 因为render是定义在原型上的方法，拿不到定义在实例里面的state
   // 所以需要手动绑定this
-  const renderOfInstance = render.bind(component)
-  console.log(renderOfInstance)
-  return renderOfInstance()
+  // const renderOfInstance = render.bind(component)
+  // console.log(renderOfInstance)
+  // return renderOfInstance()
+  // return renderOfInstance()
 }
