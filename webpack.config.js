@@ -4,7 +4,7 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin")
 
 module.exports = {
   mode: 'development',
-  entry: "./src/index.tsx",
+  entry: "./demo/index.tsx",
   output: {
     path: path.resolve("dist"),
     filename: "bundle.js",
@@ -35,7 +35,7 @@ module.exports = {
     }),
     // 指定HTML模板, 插件会将构建好的js文件自动插入到HTML文件中
     new HtmlWebpackPlugin({
-      template: "./src/index.html"
+      template: "./demo/index.html"
     })
   ],
   devServer: {
