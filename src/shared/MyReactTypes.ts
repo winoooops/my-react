@@ -8,6 +8,8 @@ export interface MyReactElement {
   ref?: MyRef<any>;
 }
 
+export type MyHTMLElement = HTMLElement & { __virtualDOM: MyReactElement } | HTMLInputElement & { __virtualDOM: MyReactElement }
+
 // createRef构造的对象
 export interface MyRefObject<T> {
   readonly current: T | null;
