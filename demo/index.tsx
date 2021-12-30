@@ -18,12 +18,16 @@ const vDOM = (
 
 console.log(vDOM)
 
-class Demo extends React.Component {
-
+class Todos extends React.Component {
+  render() {
+    return vDOM
+  }
 }
 
 const App = function () {
-  return vDOM
+  return (
+    <Todos />
+  )
 }
 
 

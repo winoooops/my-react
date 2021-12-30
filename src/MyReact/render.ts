@@ -81,7 +81,7 @@ export const mountComponent = (virtualDOM: MyReactElement, container: HTMLElemen
   if (isClassComponent(virtualDOM.type)) {
     console.log('rendering class component')
     // 创建实例并返回
-    newVirtualDOM = new C(props || {})
+    newVirtualDOM = new C(props || {}).render()
   }
   // 如果是函数组件 
   else {
