@@ -1,5 +1,5 @@
 // import React from "react";
-import { MyReactElement } from "../shared/MyReactTypes";
+import { MyHTMLElement, MyReactElement } from "../shared/MyReactTypes";
 
 /**
  * 渲染方法 
@@ -22,6 +22,61 @@ export const render = (virtualDOM: MyReactElement, container: HTMLElement | null
 }
 
 /**
+ * Diff算法
+ * @param virtualDOM 
+ * @param element 
+ * @param preVirtualDOM 
+ */
+export const diff = (virtualDOM: MyReactElement, element: HTMLElement, preVirtualDOM: MyReactElement) => { }
+
+/**
+ * 更新DOM文本节点
+ * @param virtualDOM 
+ * @param oldVirtualDOM 
+ * @param element 
+ */
+export const updateText = (virtualDOM: MyReactElement, oldVirtualDOM: MyReactElement, element: MyHTMLElement) => {
+  if (virtualDOM.props.textContent !== oldVirtualDOM.props.textContent) {
+    // 更换文本
+    element.textContent = virtualDOM.props.textContent
+    // 储存为__virtualDOM
+    element.__virtualDOM = virtualDOM
+  }
+}
+
+/**
+ * 更新DOM元素  => 更新元素下面的属性值
+ * @param virtualDOM 
+ * @param oldVirtualDOM 
+ * @param element 
+ */
+export const updateElement = (virtualDOM: MyReactElement, oldVirtualDOM: MyReactElement, element: MyHTMLElement) => {
+  const newProps = virtualDOM.props
+  const oldProps = oldVirtualDOM.props
+  const propsKeys = Object.keys(newProps)
+  const oldPropsKeys = Object.keys(oldProps)
+
+  propsKeys.length && propsKeys.forEach((key: string) => {
+    // 如果属性值发生改变
+    if (newProps[key] !== oldProps[key]) {
+      updateProp(key, newProps[key], element)
+      console.log(`---------${key} has been updated---------`)
+    }
+  })
+
+  oldPropsKeys.length && oldPropsKeys.forEach((oldKey: string) => {
+    // 如果属性被删除
+    if (!propsKeys.includes(oldKey)) {
+      removeProp(oldKey, oldProps[oldKey], element)
+    }
+  })
+
+  // 更新删除完毕后记录下当前的虚拟DOM
+  element.__virtualDOM = virtualDOM
+  // return element
+}
+
+/**
  * 利用组件虚拟DOM的type属性为function这个特点，判断指定的虚拟DOM应该被渲染成组件还是渲染成原生DOM节点 
  * @param type 
  * @returns 
@@ -38,8 +93,6 @@ export const isFunction = (type: any): boolean => {
 export const isClassComponent = (type: any): boolean => {
   return type && !!type.prototype.isReactComponent
 }
-
-export const diff = (virtualDOM: MyReactElement, element: HTMLElement, preVirtualDOM: MyReactElement) => { }
 
 /**
  * 渲染原生DOM元素
@@ -65,6 +118,8 @@ export const mountElement = (virtualDOM: MyReactElement, container: HTMLElement 
       render(child, newElement)
     })
   }
+  //* 创建DOM元素的时候记录下当前的虚拟DOM
+  newElement.__virtualDOM = virtualDOM
   container?.appendChild(newElement)
 }
 
@@ -97,8 +152,12 @@ export const mountComponent = (virtualDOM: MyReactElement, container: HTMLElemen
   }
 }
 
-
-export const attachProps = (virtualDOM: MyReactElement, element: HTMLElement) => {
+/**
+ * 更新props属性
+ * @param virtualDOM 
+ * @param element 
+ */
+export const attachProps = (virtualDOM: MyReactElement, element: MyHTMLElement) => {
   console.log(element)
   // 获取props键值对
 
@@ -107,32 +166,56 @@ export const attachProps = (virtualDOM: MyReactElement, element: HTMLElement) =>
 
   // 遍历属性
   keys && keys.forEach((propName: string) => {
-    // 如果是children 跳过
-    if (propName === 'children') return
-    // 事件以‘on’开头
-    if (propName.slice(0, 2) === 'on') {
-      const eventName = propName.toLocaleLowerCase().slice(2)
-      element.addEventListener(eventName, props[propName])
-    }
-    // className 附加属性
-    else if (propName === 'className') {
-      element.setAttribute('class', props[propName])
-    }
-    // ref 接受string或者回调函数
-    else if (propName === 'ref') {
-      //  
-    }
-    // value或者checked属性
-    else if (propName === 'value') {
-      // element.value
-      (element as HTMLInputElement).value = props[propName]
-    }
-    else if (propName === 'checked') {
-      (element as HTMLInputElement).checked = props[propName]
-    }
-    // 其他
-    else {
-      element.setAttribute(propName, props[propName])
-    }
+    updateProp(propName, props[propName], element)
   })
+}
+
+/**
+ * 更新单个属性
+ * @param propName 
+ * @param propValue 
+ * @param element 
+ * @returns 
+ */
+export const updateProp = (propName: string, propValue: any, element: MyHTMLElement) => {
+  // 如果是children 跳过
+  if (propName === 'children') return
+  // 事件以‘on’开头
+  if (propName.slice(0, 2) === 'on') {
+    const eventName = propName.toLocaleLowerCase().slice(2)
+    element.addEventListener(eventName, propValue)
+  }
+  // className 附加属性
+  else if (propName === 'className') {
+    element.setAttribute('class', propValue)
+  }
+  // ref 接受string或者回调函数
+  else if (propName === 'ref') {
+    //  
+  }
+  // value或者checked属性
+  else if (propName === 'value') {
+    // element.value
+    (element as HTMLInputElement).value = propValue
+  }
+  else if (propName === 'checked') {
+    (element as HTMLInputElement).checked = propValue
+  }
+  // 其他
+  else {
+    element.setAttribute(propName, propValue)
+  }
+}
+
+/**
+ * 删除属性 
+ * @param propName 
+ * @param propValue 
+ * @param element 
+ */
+export const removeProp = (propName: string, propValue: any, element: MyHTMLElement) => {
+  if (propName === 'children') return
+  if (propName.toLowerCase().slice(0, 2) === 'on') {
+    element.removeEventListener(propName.toLowerCase().slice(2), propValue)
+  }
 }
