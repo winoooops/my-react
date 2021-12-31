@@ -1,5 +1,5 @@
-import { createElement } from './createElement'
-import { render } from './render'
+import { createElement } from './MyReactcreateElement'
+import { render } from './MyReactRender'
 
 export {
   createElement,
