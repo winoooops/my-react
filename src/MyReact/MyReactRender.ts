@@ -20,20 +20,25 @@ export const diff = (virtualDOM: MyReactElement, container: MyHTMLElement, eleme
   // * 同级别比较
   const oldVirtualDOM = element.__virtualDOM
   const oldComponent = oldVirtualDOM?.component
+  const { type, props } = virtualDOM
   // 1. 组件类型
-  if (isFunction(virtualDOM.type)) {
+  if (isFunction(type)) {
     console.log('comparing component')
     console.log(virtualDOM)
     updateComponent(virtualDOM, oldComponent as MyReactComponent, element, container as MyHTMLElement)
   }
   // 2. DOM元素类型
   else {
-    if (virtualDOM.type === 'text') {
+    if (type === 'text') {
       updateText(virtualDOM, oldVirtualDOM, element)
     } else {
       updateDOMElement(virtualDOM, oldVirtualDOM, element)
     }
   }
+  // 如果有子元素，递归diff子元素
+  props.children?.forEach((child: MyReactElement, index: number) => {
+    diff(child, element, element.childNodes[index] as MyHTMLElement)
+  })
 }
 
 /**

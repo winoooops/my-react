@@ -65,10 +65,12 @@ export const updateDOMElement = (virtualDOM: MyReactElement, oldVirtualDOM: MyRe
   const oldPropsKeys = Object.keys(oldProps)
 
   propsKeys.length && propsKeys.forEach((key: string) => {
-    // 如果属性值发生改变
-    if (newProps[key] !== oldProps[key]) {
-      updateProp(key, newProps[key], element)
-      console.log(`---------${key} has been updated---------`)
+    if (key !== 'children') {
+      // 如果属性值发生改变
+      if (newProps[key] !== oldProps[key]) {
+        updateProp(key, newProps[key], element)
+        console.log(`---------${key} has been updated---------`)
+      }
     }
   })
 

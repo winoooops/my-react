@@ -1,6 +1,8 @@
 import { MyReactElement, MyReactComponent, MyHTMLElement } from "../shared/MyReactTypes"
 import { isClassComponent, isFunction, isSameComponent } from "../shared/utils"
 import { mountDOMElement, mountElement } from "./MyReactDOM"
+import { shouldComponentUpdate } from "./MyReactLifecycle"
+import { diff } from "./MyReactRender"
 
 /**
  * 渲染组件(需要判断组件为函数式组件还是类式组件) 
@@ -48,7 +50,16 @@ export const mountComponent = (virtualDOM: MyReactElement, container: MyHTMLElem
 export const updateComponent = (virtualDOM: MyReactElement, oldComponent: MyReactComponent, element: MyHTMLElement, container: MyHTMLElement) => {
   // 如果是同一个组件，更新
   if (isSameComponent(virtualDOM, oldComponent)) {
-    console.log('is the same component, updating')
+    console.log(oldComponent.props);
+    console.log(virtualDOM.props)
+    console.log('is the same component')
+    console.log('should component update: ' + shouldComponentUpdate(oldComponent.props, virtualDOM.props));
+
+    // 判断是否需要重新渲染
+    if (!shouldComponentUpdate(oldComponent.props, virtualDOM.props)) return
+    console.log('updating');
+    container.removeChild(element)
+    shouldComponentUpdate(oldComponent.props, virtualDOM.props) && mountElement(virtualDOM, container)
   }
   // 如果不是同一个组件，直接渲染
   else {

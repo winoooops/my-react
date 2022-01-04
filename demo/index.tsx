@@ -55,24 +55,17 @@ class Todos extends React.Component<{ type: string }>{
   }
 }
 
-const App = function () {
+const App = function (props: any) {
   return (
-    <Todos type="one" />
+    <Todos type={props.type} />
   )
 }
-
-const App2 = function () {
-  return (
-    <Todos type="two" />
-  )
-}
-
 
 const root = document.getElementById('app') as MyHTMLElement
-MyReact.render(<Todos type="one" />, root)
+MyReact.render(<App type="one" />, root)
 
 setTimeout(() => {
-  MyReact.render(<Todos type="two" />, root)
+  MyReact.render(<App type="two" />, root)
 }, 5000);
 
-console.log(root)
+// console.log(root)
