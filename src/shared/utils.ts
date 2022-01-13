@@ -5,7 +5,7 @@ import { MyReactElement } from "./MyReactTypes"
  * @param type 
  * @returns 
  */
-export const isFunction = (type: any): boolean => {
+export const isFunction = <T>(type: T): boolean => {
   return type && type instanceof Function
 }
 
@@ -14,7 +14,7 @@ export const isFunction = (type: any): boolean => {
  * @param type 
  * @returns 
  */
-export const isClassComponent = (type: any): boolean => {
+export const isClassComponent = <T extends Function>(type: T): boolean => {
   return type && !!type.prototype.isReactComponent
 }
 
@@ -25,9 +25,9 @@ export const isClassComponent = (type: any): boolean => {
  * @returns 
  */
 export const isSameComponent = (virtualDOM: MyReactElement, oldComponent: any) => {
-  // console.log(virtualDOM.type)
-  // console.log(oldComponent.constructor)
-  // console.log(virtualDOM.type === oldComponent.constructor)
+  console.log(virtualDOM.type)
+  console.log(oldComponent.constructor)
+  console.log(virtualDOM.type === oldComponent.constructor)
   return oldComponent && virtualDOM.type === oldComponent.constructor
 }
 
@@ -36,7 +36,7 @@ export const isReference = <T>(value: T): boolean => {
 }
 
 
-export const isEqual = (firstObj: { [key: string]: any }, secondObj: { [key: string]: any }): boolean => {
+export const isEqual = <T>(firstObj: T, secondObj: T): boolean => {
   // 1. 如果不是复杂类型，直接判断
   if (!isReference(firstObj) || !isReference(secondObj)) return firstObj === secondObj
 

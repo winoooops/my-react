@@ -1,6 +1,7 @@
 import React from "react";
 import * as MyReact from "../src/MyReact";
 import { MyHTMLElement } from "../src/shared/MyReactTypes";
+import { isFunction } from "../src/shared/utils";
 import './styles.scss'
 
 // 因为@babel/react-preset中的pragma无法和runtime属性一起使用，造成不手动调用一次babel不自动找到MyReact的问题
@@ -45,10 +46,7 @@ const anotherVDOM = (
   </main>
 )
 
-console.log(vDOM)
-
 class Todos extends React.Component<{ type: string }>{
-
   render() {
     const { type } = this.props
     return type === 'one' ? vDOM : vDOM2
@@ -69,3 +67,29 @@ setTimeout(() => {
 }, 5000);
 
 // console.log(root)
+
+// const Greeting = function () {
+//   return (
+//     <div>
+//       <h1>Hello React</h1>
+//     </div>
+//   )
+// }
+
+// class Welcome extends React.Component {
+//   render() {
+//     return (
+//       <div>
+//         <h1>Hello React</h1>
+//       </div>
+//     )
+//   }
+// }
+
+// console.log(Greeting);
+// console.log(Welcome)
+
+// MyReact.render(<Welcome />, root)
+// MyReact.render(<Greeting />, root)
+// console.log(<Welcome />)
+

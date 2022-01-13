@@ -26,7 +26,9 @@ export const mountComponent = (virtualDOM: MyReactElement, container: MyHTMLElem
   // 如果是函数组件 
   else {
     console.log('rendering functional component')
+    // 函数式组件 
     newVirtualDOM = C(props || {})
+    // 记录下component方便diff算法比较
   }
 
   // 记录下虚拟DOM方便diff算法比较
@@ -59,7 +61,7 @@ export const updateComponent = (virtualDOM: MyReactElement, oldComponent: MyReac
     if (!shouldComponentUpdate(oldComponent.props, virtualDOM.props)) return
     console.log('updating');
     container.removeChild(element)
-    shouldComponentUpdate(oldComponent.props, virtualDOM.props) && mountElement(virtualDOM, container)
+    shouldComponentUpdate(oldComponent.props, virtualDOM.props) && mountComponent(virtualDOM, container)
   }
   // 如果不是同一个组件，直接渲染
   else {
