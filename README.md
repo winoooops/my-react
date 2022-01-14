@@ -1,6 +1,6 @@
 # 用TypeScript手摸手造一个React轮子
 
-> 本篇文章是在阅读[小村儿](https://juejin.cn/user/1310273589219623/posts)大佬的react学习系列之后自己的实践和补充, 正好最近也想通过用Typescript造轮子的过程加深对TS和类型思想的理解, 毕竟React对TS的支持度还是很高的(点名批评Vue). 我一致认为, 理解源码最好的方式就是自己造一个, 希望也能对你有所帮助.
+> 本篇文章是在阅读[小村儿](https://juejin.cn/user/1310273589219623/posts)大佬的react学习系列之后自己的实践和补充, 正好最近也想通过用Typescript造轮子的过程加深对TS和类型思想的理解, 毕竟React对TS的支持度还是很高的(点名批评Vue). 理解源码最好的方式可能就是自己造一个. 这里大部分是我对编码思路的一些整理, 希望也能对你有所帮助. 如果有哪里不对或者不准确的地方, 也希望你能够毫不吝啬地指出来🥺
 
 ## Overall Structure(updating)
 ![Diff PsuysoCode](./public/images/diff-with-only-props.png)
@@ -8,12 +8,12 @@
 ## 目录
 - [Why VirtualDOM](#Why&nbsp;VirtualDOM)
 - [VitualDOM in a Nutshell](#VitualDOM&nbsp;in&nbsp;a&nbsp;Nutshell)
+- [0. 项目准备](0.&nbsp;项目准备)
 - [1. createElement](1.&nbsp;createElement)
 - [2. 渲染DOM元素](2.&nbsp;渲染DOM元素)
 - [3. 渲染组件](3.&nbsp;渲染组件)
 - [4. Diff算法(props)](4.&nbsp;Diff算法(props))
 - [5. Diff算法(key)](5.&nbsp;Diff算法(key))
-
 
 ## Why VirtualDOM 
 > 用脚本进行DOM操作的代价很昂贵.有个贴切的比喻，把DOM和JavaScript各自想象为一个岛屿，它们之间用收费桥梁连接，js每次访问DOM，都要途径这座桥，并交纳“过桥费”,访问DOM的次数越多，费用也就越高. 因此，推荐的做法是尽量减少过桥的次数，努力待在ECMAScript岛上. 现代浏览器使用JavaScript操作DOM是必不可少的，但是这个动作是非常消耗性能的，因为使用JavaScript操作DOM对象要比JavaScript操作普通对象要慢很多，页面如果频繁的DOM操作会造成页面卡顿，应用流畅度降低，造成非常不好的体验.
@@ -43,6 +43,92 @@ React.createElement (
   React.createElement("p", null, "React is great")
 )
 ```
+
+## 0. 项目准备
+* `tsconfig.json` 
+基本就是`tsc --init` 生成的, 只需要确保`jsx`选项用的是“preserve”.
+```json
+{
+    "compilerOptions": {
+        "target": "es2016", 
+        "jsx": "preserve", 
+        "module": "commonjs",
+        "esModuleInterop": true, 
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true
+    }
+}
+```
+* 文件结构
+```
+├─demo
+└─src
+|  ├─MyReact
+|  └─shared
+```
+* 安装所需依赖:
+    * React和TS: `yarn add react typescript`
+    * Webpack相关: `yarn add -D webpack webpack-cli webpack-dev-server style-loader sass-loader node-sass css-loader clean-webpack-plugin html-webpack-plugin babel-plugin-react-transform babel-loader @babel/core @babel/preset-env @babel/preset-react`
+    * TS代码提示: `yarn add -D @types/react @types/dom `
+    * webpack.config.js
+    ```js
+    const path = require("path")
+    const HtmlWebpackPlugin = require("html-webpack-plugin")
+    const { CleanWebpackPlugin } = require("clean-webpack-plugin")
+
+    module.exports = {
+      mode: 'development',
+      entry: "./demo/index.tsx",
+      output: {
+        path: path.resolve("dist"),
+        filename: "bundle.js",
+        // devtoolModuleFilenameTemplate: '../[resource-path]'
+      },
+      // 需要解析的文件类型
+      resolve: {
+        extensions: ['.ts', '.tsx', '.json', '.js'],
+      },
+      devtool: "inline-source-map",
+      module: {
+        rules: [
+          {
+            test: /\.tsx?$/,
+            use: ['babel-loader', 'ts-loader'],
+          },
+          {
+            test: /\.scss?$/,
+            use: ['style-loader', 'css-loader', 'sass-loader']
+          }
+        ]
+      },
+      plugins: [
+        // 在构建之前将dist文件夹清理掉
+        new CleanWebpackPlugin({
+          cleanOnceBeforeBuildPatterns: ["./dist"]
+        }),
+        // 指定HTML模板, 插件会将构建好的js文件自动插入到HTML文件中
+        new HtmlWebpackPlugin({
+          template: "./demo/index.html"
+        })
+      ],
+      devServer: {
+        // 指定开发环境应用运行的根据目录
+        // contentBase: "./dist",
+        // 指定控制台输出的信息
+        // stats: "errors-only",
+        // 不启动压缩
+        compress: false,
+        host: "localhost",
+        port: 5000,
+        hot: true,
+      }
+    }
+
+
+    ```
+
+
 
 ## 1. createElement 
 为了了解createElement实现的原理，我们可以自己写一个简单的createElement方法，首先在react项目中的`.babelrc`中指明自定义的方法
