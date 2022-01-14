@@ -19,17 +19,16 @@ export const render = (virtualDOM: MyReactElement, container: MyHTMLElement) => 
  * @param element 
  * @param preVirtualDOM 
  */
-export const diff = (virtualDOM: MyReactElement, container: MyHTMLElement, element: MyHTMLElement) => {
+export const diff = (virtualDOM: MyReactElement, container: MyHTMLElement, element: MyHTMLElement, oldVirtualDOM: MyReactElement = element?.__virtualDOM) => {
   // * 第一次渲染
   if (!element) return mountElement(virtualDOM, container)
   // * 同级别比较
   // 获取之前的虚拟DOM
-  const oldVirtualDOM = element.__virtualDOM
   const { type, props } = virtualDOM
   // 1. 组件类型
   if (isFunction(type)) {
     const oldComponent = oldVirtualDOM.component
-    updateComponent(virtualDOM, oldComponent as MyReactComponent, element, container as MyHTMLElement)
+    updateComponent(virtualDOM, oldVirtualDOM, element, container as MyHTMLElement)
   }
   // 2. DOM元素类型
   else {

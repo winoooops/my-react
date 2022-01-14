@@ -49,24 +49,49 @@ export const mountComponent = (virtualDOM: MyReactElement, container: MyHTMLElem
  * @param element 
  * @param container 
  */
-export const updateComponent = (virtualDOM: MyReactElement, oldComponent: MyReactComponent, element: MyHTMLElement, container: MyHTMLElement) => {
+export const updateComponent = (virtualDOM: MyReactElement, oldVirtualDOM: MyReactElement, element: MyHTMLElement, container: MyHTMLElement) => {
+  const oldComponent = oldVirtualDOM.component
+  if (!oldComponent || !isSameComponent(virtualDOM, oldComponent)) {
+    console.log('is not the same component, start rendering')
+    container.removeChild(element)
+    mountElement(virtualDOM, container)
+  }
+
   // 如果是同一个组件，更新
-  if (isSameComponent(virtualDOM, oldComponent)) {
-    console.log(oldComponent.props);
+  else {
     console.log(virtualDOM.props)
     console.log('is the same component')
     console.log('should component update: ' + shouldComponentUpdate(oldComponent.props, virtualDOM.props));
 
     // 判断是否需要重新渲染
     if (!shouldComponentUpdate(oldComponent.props, virtualDOM.props)) return
-    console.log('updating');
-    container.removeChild(element)
-    shouldComponentUpdate(oldComponent.props, virtualDOM.props) && mountComponent(virtualDOM, container)
-  }
-  // 如果不是同一个组件，直接渲染
-  else {
-    console.log('is not the same component, start rendering')
-    container.removeChild(element)
-    mountElement(virtualDOM, container)
+    // container.removeChild(element)
+    // shouldComponentUpdate(oldComponent.props, virtualDOM.props) && mountComponent(virtualDOM, container)
+    // 更新的时候需要循环遍历下面的子组件
+    const { type: C, props } = virtualDOM
+    const newVirtualDOM = new C(props || {}).render()
+    // 如果依然为组件
+    if (isFunction(newVirtualDOM.type)) {
+      // diff(newVirtualDOM, )
+    }
+    // DOM元素
+    else {
+      const { children } = newVirtualDOM.props
+      const { children: oldChildren } = oldVirtualDOM.props
+      // Todo 应该用key来查找, 现在先用index查找
+      children?.forEach((newElement: MyReactElement, index: number) => {
+        console.log(newElement);
+        console.log('oldElement: ', oldChildren[index]);
+        const oldElement = oldChildren[index]
+        // 如果不存在, 直接添加
+        if (!oldElement) {
+          mountElement(newElement, container)
+        }
+        // 如果存在, 递归Diff
+        else {
+          diff(newElement, container, element, oldElement)
+        }
+      });
+    }
   }
 }

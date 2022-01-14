@@ -46,10 +46,54 @@ const anotherVDOM = (
   </main>
 )
 
+class Todo extends React.Component<{ task: string }> {
+  render() {
+    return (
+      <li className="todo">
+        {this.props.task}
+      </li>
+    )
+  }
+}
+
 class Todos extends React.Component<{ type: string }>{
   render() {
     const { type } = this.props
-    return type === 'one' ? vDOM : vDOM2
+    // const engList = (
+    //   <div>
+    //     <Todo task="createElement" />
+    //     <Todo task="render" />
+    //     <Todo task="diff" />
+    //   </div>
+    // )
+    const engList = (
+      <div>
+        <p>createElement</p>
+        <p>render</p>
+        <p>diff</p>
+      </div>
+    )
+    // const cnList = (
+    //   <div>
+    //     <Todo task="createElement" />
+    //     <Todo task="createElement" />
+    //     <Todo task="createElement" />
+    //     <Todo task="虚拟DOM" />
+    //     <Todo task="渲染" />
+    //     <Todo task="Diff算法" />
+    //   </div>
+    // )
+    const cnList = (
+      <div>
+        <p>createElement</p>
+        <p>render</p>
+        <p>diff</p>
+        <p>虚拟DOM</p>
+        <p>渲染</p>
+        <p>Diff算法</p>
+      </div>
+    )
+    return type === 'one' ? engList : cnList
   }
 }
 
@@ -60,10 +104,10 @@ const App = function (props: any) {
 }
 
 const root = document.getElementById('app') as MyHTMLElement
-MyReact.render(<App type="one" />, root)
+MyReact.render(<Todos type="one" />, root)
 
 setTimeout(() => {
-  MyReact.render(<App type="two" />, root)
+  MyReact.render(<Todos type="two" />, root)
 }, 5000);
 
 // console.log(root)
