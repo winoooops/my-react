@@ -1,8 +1,8 @@
 // import React from "react";
 import { MyHTMLElement, MyReactComponent, MyReactElement } from "../shared/MyReactTypes";
 import { isClassComponent, isFunction, isSameComponent } from "../shared/utils";
-import { updateComponent } from "./MyReactComponent";
-import { mountDOMElement, mountElement, updateDOMElement, updateText } from "./MyReactDOM";
+import { updateComponent, mountComponent } from "./MyReactComponent";
+import { mountDOMElement, updateDOMElement, updateText } from "./MyReactDOM";
 
 /**
  * 借助Diff实现渲染
@@ -27,7 +27,6 @@ export const diff = (virtualDOM: MyReactElement, container: MyHTMLElement, eleme
   const { type, props } = virtualDOM
   // 1. 组件类型
   if (isFunction(type)) {
-    const oldComponent = oldVirtualDOM.component
     updateComponent(virtualDOM, oldVirtualDOM, element, container as MyHTMLElement)
   }
   // 2. DOM元素类型
@@ -42,4 +41,24 @@ export const diff = (virtualDOM: MyReactElement, container: MyHTMLElement, eleme
   props.children?.forEach((child: MyReactElement, index: number) => {
     diff(child, element, element.childNodes[index] as MyHTMLElement)
   })
+}
+
+/**
+ * 渲染方法 
+ * @param virtualDOM 
+ * @param container 
+ * @returns 
+ */
+export const mountElement = (virtualDOM: MyReactElement, container: MyHTMLElement) => {
+  if (!container) return
+  // 渲染组件还是渲染DOM元素
+  if (isFunction(virtualDOM.type)) {
+    // 渲染组件 
+    mountComponent(virtualDOM, container)
+    // console.log(React.Component.prototype.isReactComponent === {})
+  } else {
+    // 渲染原生DOM元素
+    console.log('Rendering DOM Element')
+    mountDOMElement(virtualDOM, container)
+  }
 }

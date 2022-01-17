@@ -1,8 +1,8 @@
 import { MyReactElement, MyReactComponent, MyHTMLElement } from "../shared/MyReactTypes"
 import { isClassComponent, isFunction, isSameComponent } from "../shared/utils"
-import { mountDOMElement, mountElement } from "./MyReactDOM"
+import { mountDOMElement } from "./MyReactDOM"
 import { shouldComponentUpdate } from "./MyReactLifecycle"
-import { diff } from "./MyReactRender"
+import { diff, mountElement } from "./MyReactRender"
 
 /**
  * 渲染组件(需要判断组件为函数式组件还是类式组件) 
@@ -19,7 +19,7 @@ export const mountComponent = (virtualDOM: MyReactElement, container: MyHTMLElem
     console.log('rendering class component')
     // 创建实例并返回
     component = new C(props || {})
-    newVirtualDOM = component.render()
+    newVirtualDOM = component?.render()
     // 记录下component方便diff算法比较
     newVirtualDOM.component = component
   }
@@ -73,13 +73,17 @@ export const updateComponent = (virtualDOM: MyReactElement, oldVirtualDOM: MyRea
     // 如果依然为组件
     if (isFunction(newVirtualDOM.type)) {
       // diff(newVirtualDOM, )
+      updateComponent(newVirtualDOM, oldVirtualDOM, element, container)
     }
     // DOM元素
     else {
       const { children } = newVirtualDOM.props
+      console.log(children);
       const { children: oldChildren } = oldVirtualDOM.props
+      console.log(oldChildren);
       // Todo 应该用key来查找, 现在先用index查找
       children?.forEach((newElement: MyReactElement, index: number) => {
+        console.log(index);
         console.log(newElement);
         console.log('oldElement: ', oldChildren[index]);
         const oldElement = oldChildren[index]

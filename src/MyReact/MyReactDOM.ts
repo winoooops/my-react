@@ -1,26 +1,9 @@
 import { MyHTMLElement, MyReactElement } from "../shared/MyReactTypes"
-import { isEqual, isFunction } from "../shared/utils"
+import { isClassComponent, isEqual, isFunction } from "../shared/utils"
 import { mountComponent } from "./MyReactComponent"
+import { mountElement } from "./MyReactRender"
 
-/**
- * 渲染方法 
- * @param virtualDOM 
- * @param container 
- * @returns 
- */
-export const mountElement = (virtualDOM: MyReactElement, container: MyHTMLElement) => {
-  if (!container) return
-  // 渲染组件还是渲染DOM元素
-  if (isFunction(virtualDOM.type)) {
-    // 渲染组件 
-    mountComponent(virtualDOM, container)
-    // console.log(React.Component.prototype.isReactComponent === {})
-  } else {
-    // 渲染原生DOM元素
-    console.log('Rendering DOM Element')
-    mountDOMElement(virtualDOM, container)
-  }
-}
+
 
 /**
  * 渲染原生DOM元素
@@ -127,9 +110,29 @@ export const attachProps = (virtualDOM: MyReactElement, element: MyHTMLElement) 
  */
 export const updateProp = (propName: string, propValue: any, element: MyHTMLElement) => {
   // 如果是children 跳过
-  if (propName === 'children') return
+  if (propName === 'children') {
+    // TODO: 如果遍历的虚拟DOM是组件的话, 需要更新这个虚拟DOM下面的component属性
+    propValue.map((child: MyReactElement) => {
+      const { type: C, props } = child
+      let result
+      // 如果为组件
+      if (isFunction(C)) {
+        if (isClassComponent(child.type)) {
+          result = Object.assign(child, { component: new C(props || {}) })
+        } else {
+          result = Object.assign(child, { component: C(props || {}) })
+        }
+        return result
+      }
+      // 如果为DOM元素 
+      else {
+        return child
+      }
+    })
+    console.log(propValue);
+  }
   // 事件以‘on’开头
-  if (propName.slice(0, 2) === 'on') {
+  else if (propName.slice(0, 2) === 'on') {
     const eventName = propName.toLocaleLowerCase().slice(2)
     element.addEventListener(eventName, propValue)
   }

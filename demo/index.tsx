@@ -59,40 +59,40 @@ class Todo extends React.Component<{ task: string }> {
 class Todos extends React.Component<{ type: string }>{
   render() {
     const { type } = this.props
-    // const engList = (
-    //   <div>
-    //     <Todo task="createElement" />
-    //     <Todo task="render" />
-    //     <Todo task="diff" />
-    //   </div>
-    // )
     const engList = (
       <div>
-        <p>createElement</p>
-        <p>render</p>
-        <p>diff</p>
+        <Todo task="createElement" />
+        <Todo task="render" />
+        <Todo task="diff" />
       </div>
     )
-    // const cnList = (
+    // const engList = (
     //   <div>
-    //     <Todo task="createElement" />
-    //     <Todo task="createElement" />
-    //     <Todo task="createElement" />
-    //     <Todo task="虚拟DOM" />
-    //     <Todo task="渲染" />
-    //     <Todo task="Diff算法" />
+    //     <p>createElement</p>
+    //     <p>render</p>
+    //     <p>diff</p>
     //   </div>
     // )
     const cnList = (
       <div>
-        <p>createElement</p>
-        <p>render</p>
-        <p>diff</p>
-        <p>虚拟DOM</p>
-        <p>渲染</p>
-        <p>Diff算法</p>
+        <Todo task="createElement" />
+        <Todo task="render" />
+        <Todo task="diff" />
+        <Todo task="虚拟DOM" />
+        <Todo task="渲染" />
+        <Todo task="Diff算法" />
       </div>
     )
+    // const cnList = (
+    //   <div>
+    //     <p>createElement</p>
+    //     <p>render</p>
+    //     <p>diff</p>
+    //     <p>虚拟DOM</p>
+    //     <p>渲染</p>
+    //     <p>Diff算法</p>
+    //   </div>
+    // )
     return type === 'one' ? engList : cnList
   }
 }
