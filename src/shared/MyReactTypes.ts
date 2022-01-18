@@ -6,9 +6,11 @@ export interface MyReactElement {
   props: { [key: string]: any },
   key: any | null,
   ref?: MyRef<any>;
-  func?: Function;
 }
 
+export interface MyReactComponent {
+  [key: string]: any;
+}
 
 export type MyHTMLElement = HTMLElement & { __virtualDOM: MyReactElement } | HTMLInputElement & { __virtualDOM: MyReactElement }
 

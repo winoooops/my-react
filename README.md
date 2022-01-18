@@ -1,280 +1,205 @@
-# 用TypeScript手摸手造一个React轮子
+# 用TypeScript手摸手造一个React轮子(组件渲染篇)
 
 > 本篇文章是在阅读[小村儿](https://juejin.cn/user/1310273589219623/posts)大佬的react学习系列之后自己的实践和补充, 正好最近也想通过用Typescript造轮子的过程加深对TS和类型思想的理解, 毕竟React对TS的支持度还是很高的(点名批评Vue). 理解源码最好的方式可能就是自己造一个. 这里大部分是我对编码思路的一些整理, 希望也能对你有所帮助. 如果有哪里不对或者不准确的地方, 也希望你能够毫不吝啬地指出来🥺
 
 ## 目录
-- [项目准备](项目准备)
-- [Why VirtualDOM](#Why&nbsp;VirtualDOM)
-- [VitualDOM in a Nutshell](#VitualDOM&nbsp;in&nbsp;a&nbsp;Nutshell)
-- [1. createElement](1.&nbsp;createElement)
-- [2. 渲染DOM元素](2.&nbsp;渲染DOM元素)
+- [1. 组件渲染的逻辑](1.&nbsp;组件渲染的逻辑)
+- [2. 区分组件和DOM元素](2.&nbsp;区分组件和DOM元素)
+- [3. 判断函数式组件和类组件](3.&nbsp;判断函数式组件和类组件)
+- [4. 渲染组件](4.&nbsp;渲染组件)
+- [5. 测试](5.&nbsp;测试)
 
-## 项目准备
-* `tsconfig.json`: 基本就是`tsc --init` 生成的, 目前只需要确保`jsx`选项用的是“preserve”即可.
-```json
-{
-    "compilerOptions": {
-        "target": "es2016", 
-        "jsx": "preserve", 
-        "module": "commonjs",
-        "esModuleInterop": true, 
-        "strict": true,
-        "forceConsistentCasingInFileNames": true,
-        "skipLibCheck": true
-    }
+
+## 1. 组件渲染的逻辑
+我们在之前实现了渲染原生DOM元素, 下一步就来操作下组件的渲染吧! 在jsx和tsx中，组件在被使用的时候都会以`<Greeting />`这样的形式出现，并且组件分为函数式组件和类式组件. 所以必须先对组件的类型做判断.结合上上一节的DOM元素渲染，render函数现在伪代码应该是:
+1. 如果是DOM元素，执行mountDOMElement方法
+2. 如果是组件，判断组件的类型
+    * 渲染函数式组件
+    * 渲染类式组件
+    * 判断渲染出来的虚拟DOM类型
+      * 如果为组件, 递归渲染
+      * 如果为DOM元素, 递归渲染
+## 2. 区分组件和DOM元素
+第一步我们要解决的就是如何判断某个虚拟DOM是组件，先来看看组件在被creatElement编译过后长的啥样: 
+
+分别定义函数式组件`Greeting`和类组件`Welcome`, 然后用console.log打印到控制台里.
+> 这里我在定义类组件的时候直接继承的`React.Component`, 先埋个坑, 以后在实现生命周期或者实现Fiber的时候补上...
+
+```tsx
+const Greeting = function () {
+  return (
+    <div>
+      <h1>Hello React</h1>
+    </div>
+  )
 }
+
+class Welcome extends React.Component {
+  render() {
+    return (
+      <div>
+        <h1>Hello React</h1>
+      </div>
+    )
+  }
+}
+
+console.log(<Greeting />);
+console.log(<Welcome />)
 ```
-* 文件结构
-```
-├─demo
-└─src
-|  ├─MyReact // 具体实现的代码放这里
-|  └─shared // 一些辅助函数和TS类型
-```
-* 安装所需依赖:
-    * React和TS: `yarn add react typescript`
-    * Webpack相关: `yarn add -D webpack webpack-cli webpack-dev-server style-loader sass-loader node-sass css-loader clean-webpack-plugin html-webpack-plugin babel-plugin-react-transform babel-loader @babel/core @babel/preset-env @babel/preset-react`
-    * TS代码提示: `yarn add -D @types/react @types/dom `
-* `webpack.config.js`
-    ```js
-    const path = require("path")
-    const HtmlWebpackPlugin = require("html-webpack-plugin")
-    const { CleanWebpackPlugin } = require("clean-webpack-plugin")
+下图打印出来的结果,是通过我们之前写的`createElement`方法实现的———不管是函数式组件还是类组件，在被`console.log`打印出来的时候会是下图这样的.可以发现，Welcome组件的虚拟DOM(右图)，它的type(`Welcome()`)这里和原生DOM元素的`"div"`这样的(左图)不同，是函数来的.
 
-    module.exports = {
-      mode: 'development',
-      entry: "./demo/index.tsx",
-      output: {
-        path: path.resolve("dist"),
-        filename: "bundle.js",
-        // devtoolModuleFilenameTemplate: '../[resource-path]'
-      },
-      // 需要解析的文件类型
-      resolve: {
-        extensions: ['.ts', '.tsx', '.json', '.js'],
-      },
-      devtool: "inline-source-map",
-      module: {
-        rules: [
-          {
-            test: /\.tsx?$/,
-            use: ['babel-loader', 'ts-loader'],
-          },
-          {
-            test: /\.scss?$/,
-            use: ['style-loader', 'css-loader', 'sass-loader']
-          }
-        ]
-      },
-      plugins: [
-        // 在构建之前将dist文件夹清理掉
-        new CleanWebpackPlugin({
-          cleanOnceBeforeBuildPatterns: ["./dist"]
-        }),
-        // 指定HTML模板, 插件会将构建好的js文件自动插入到HTML文件中
-        new HtmlWebpackPlugin({
-          template: "./demo/index.html"
-        })
-      ],
-      devServer: {
-        // 指定开发环境应用运行的根据目录
-        // contentBase: "./dist",
-        // 指定控制台输出的信息
-        // stats: "errors-only",
-        // 不启动压缩
-        compress: false,
-        host: "localhost",
-        port: 5000,
-        hot: true,
-      }
-    }
-
-
-    ```
-## Why VirtualDOM 
-> 用脚本进行DOM操作的代价很昂贵.有个贴切的比喻，把DOM和JavaScript各自想象为一个岛屿，它们之间用收费桥梁连接，js每次访问DOM，都要途径这座桥，并交纳“过桥费”,访问DOM的次数越多，费用也就越高. 因此，推荐的做法是尽量减少过桥的次数，努力待在ECMAScript岛上. 现代浏览器使用JavaScript操作DOM是必不可少的，但是这个动作是非常消耗性能的，因为使用JavaScript操作DOM对象要比JavaScript操作普通对象要慢很多，页面如果频繁的DOM操作会造成页面卡顿，应用流畅度降低，造成非常不好的体验.
-
-Virtual DOM其实本质上就是React用来描述DOM对象的JavaScript对象，使用Virtual DOM的最主要原因便是提升效率——通过精确的找出发生变化的DOM对象，从而在在最少程度上减少直接操作DOM的次数.
-## VitualDOM in a Nutshell
-用三句话总结虚拟DOM的本质便是：
-1. 虚拟DOM是Object类型的对象
-2. 虚拟DOM无需真实DOM的诸多属性
-3. 虚拟DOM最终会被React转化为真实DOM
-
-借助babel，我们可以很清楚的看到jsx是怎样被编译的[^注]
-
-[^注]: 代码案例来源: (https://juejin.cn/post/6970715569758666782)
-
-### Babel编译虚拟DOM
-```jsx
-// jsx代码
-<div className="container">
-  <h3>Hello React</h3>
-  <p>React is great</p>
+<div style="display: flex;">
+<img src="./public/images/createElement-DOM.png" width="40%" style="padding-right:2em;" alt="原生DOM的虚拟DOM">
+<img src="./public/images/greeting.png" width="40%" alt="组件的虚拟DOM">
 </div>
+<br/>
 
-// babel 编译过后
-React.createElement (
-  "div",
-  {
-    className: "container"
-  },
-  React.createElement("h3", null, "Hello React"),
-  React.createElement("p", null, "React is great")
-)
-```
-
-### 虚拟DOM的基本结构
-而此时,如果我们在console.log中打印出上面这段jsx代码, 可以看到对应虚拟DOM的基本结构
-```
-{
-  type: "div",
-  props: { className: "container" },
-  children: [
-    {
-      type: "h3",
-      props: null,
-      children: [
-        {
-          type: "text",
-          props: {
-            textContent: "Hello React"
-          }
-        }
-      ]
-    },
-    {
-      type: "p",
-      props: null,
-      children: [
-        {
-          type: "text",
-          props: {
-            textContent: "React is great"
-          }
-        }
-      ]
-    }
-  ]
+那么我们可以其`type`属性是否为函数这一点来判断某个虚拟DOM是否为组件.
+```ts
+/* shared/utils.ts */
+/**
+ * 利用组件虚拟DOM的type属性为function这个特点，判断指定的虚拟DOM应该被渲染成组件还是渲染成原生DOM节点 
+ * @param type 
+ * @returns boolean
+ */
+export const isFunction = <T>(type: T): boolean => {
+  return type && type instanceof Function
 }
+
+
+/* demo/index.tsx */
+console.log(isFunction(vDOM)); // false 
+console.log(isFunction(Greeting.type)); // 报错, Property 'type' does not exist on type '() => Element'.
+console.log(isFunction(Welcome.type)); // 报错, Property 'type' does not exist on type 'typeof Welcome'.
 ```
+> 这里有个问题, 如果我们直接去判断`Greeting`这个函数和`Welcome`这个类的type是否为函数时, TS会报错——因为在他们在此时都只是单纯的tsx代码, 并没有被createElement方法编译成虚拟DOM; 而type属性是存在于虚拟DOM上的;  
+> ```ts
+> const greeting = Greeting() // 
+> const welcome = new Welcome({}).render()
+>
+> // console.log(isFunction(Greeting.type)) ❌
+> console.log(isFunction(greeting.type)) //️ true
+>
+> // console.log(isFunction(Welcome.type)) ❌
+> console.log(isFunction(welcome.type)) // true
+> ```
+## 3. 判断函数式组件和类组件
+如果我们细看组件中的这个type属性，可以发现Welcome和Greeting返回的这个`type`函数是有区别的:
 
-## 1. createElement 
-为了了解createElement实现的原理，我们需要自己写一个简单的createElement方法，首先在react项目中的`.babelrc`中指明自定义的方法
+![difference](./public/images/difference.png)
 
+如果尝试打印出这两者的protype的话，就会是这样的:
 
-```json
-// .babelrc
-{
-  "presets": [
-    "@babel/preset-env",
-    [
-      "babel/preset-react",
-      {
-        "pragma": "MyReact.createElement"
-      }
-    ]
-  ]
-}
+![prototype](./public/images/component-and-func.png)
+
+`Welcome`继承的是`React.Component`这个父类，我在阅读[React是如何区分Class和Function](https://zhuanlan.zhihu.com/p/51705609)这篇文章时候了解到——官方使用在Component里加上了`isReactComponent`这个属性, 用来实现类组件和函数式组件的区分：
+```js
+// React 内部
+class Component {}
+Component.isReactClass = {};
+
+// 我们可以像这样检查它
+class Welcome extends React.Component {}
+console.log(Welcome.isReactClass); // {}
 ```
+于是我就可以使用下面这个方法来区别函数式样组件和类组件：
+```ts
+/* src/shared/utils.ts */
 
-这样一来虚拟DOM都会通过MyReact.createElement这个方法被构造. 
-
-为了让createElement返回的对象符合React虚拟DOM的数据结构，createElement需要参照上一节中[*虚拟DOM的基本结构*](虚拟DOM的基本结构)来构造这个函数的返回.
-```typescript
-/* MyReact/MyReactCreateElement.ts */
+export const isFunction = () => { /* ... */ }
 
 /**
- * 
- * @param type 元素类型
- * @param props 属性
- * @param children 子元素 
+ * 可以利用类组件的实例的原型上有isReactComponent这个属性来判断是函数式组件还是类式组件 
+ * @param type 
  * @returns 
  */
-export const createElement = (type: any, props: any, ...children: any): MyReactElement => {
-  // 对子元素进行处理
-  const childElements = children.map((child: any) => {
-    // 如果子元素为虚拟DOM对象，直接返回
-    if (child instanceof Object) {
-      return child
-    }
-    // 如果子元素为纯文本，将文本储存在props.textContent中返回
-    else {
-      return createElement('text', { textContent: child })
-    }
-  })
-  // props 中必须保存children信息 
-  props = Object.assign({}, props, { children: childElements })
+export const isClassComponent = <T extends Function>(type: T): boolean => {
+  return type && !!type.prototype.isReactComponent
+}
 
-  // 这两个属性后期会用到
-  const key = props.key || null
-  const ref = props.ref || null
+```
 
-  return {
-    type,
-    props,
-    key,
-    ref,
+## 4. 渲染组件
+
+现在, 借助`isFunction`和`isClassComponent`这两个方法，就可以实现之前提到的这个逻辑:
+1. 如果是DOM元素，执行`mountDOMElement`方法
+2. 如果是组件，执行`mountComponent`, 判断组件的类型
+    * 渲染函数式组件
+    * 渲染类式组件
+    * 判断渲染出来的虚拟DOM类型
+      * 如果为组件, 递归执行`mountComponent`
+      * 如果为DOM元素, 递归执行`mountDOMElement`
+
+<div style="display:flex;">    
+<div style="flex: 2 1 auto; margin-right:2em;">
+
+```ts
+export const mountComponent = (virtualDOM: MyReactElement, container: HTMLElement) => {
+  // 获取构造函数和属性
+  const { type: C, props } = virtualDOM
+  let newVirtualDOM: MyReactElement
+  // 如果是类组件
+  if (isClassComponent(virtualDOM.type)) {
+    console.log('rendering class component')
+    // 创建实例并返回
+    const c = new virtualDOM.type()
+    newVirtualDOM = c.render(props || {} )
+  }
+  // 如果是函数组件 
+  else {
+    console.log('rendering functional component')
+    newVirtualDOM = C(props || {})
+  }
+
+  // 记录下虚拟DOM方便diff算法比较
+  container.__virtualDOM = newVirtualDOM
+
+  // 判断newVirualDOM的类型是否为函数
+  if (isFunction(newVirtualDOM.type)) {
+    mountComponent(newVirtualDOM, container)
+  } else {
+    mountDOMElement(newVirtualDOM, container)
   }
 }
 ```
 
-这里还有几个以后会用到的类型 :
 
+</div>
+
+<div class="width:20%;">
+
+重点:
+
+1. 函数式的组件: 在渲染的时候用`newVirtualDOM = C(props)`
+2. 类式组件: 在渲染的时候用必须先创建*C*的实例*c*，然后才能使用`c.render(props)`
+3. 在成功赋值给newVirtualDOM之后判断这个虚拟DOM的类型
+    * 如果是组件，必须递归渲染`mountComponent`
+    * 如果是DOM元素，递归执行`mountElement`方法
+
+</div>
+</div>
+
+> 这里需要考虑到一个特殊情况: 当我们把组件包裹在原生DOM元素下, 例如下面这样的情况时
+> ```ts
+> const vDOM = (
+>   <div>
+>     <Todos>
+>   </div>
+> ) 
+> ```
+>
+> 因为最外层是`<div>`, 所以会首先执行`mountDOMElement`这个方法, 但是上一节我们在这个方法里, 对于子元素只考虑到了渲染原生DOM这么一个场景. 为了适配子元素是组件的情况, 我们还需要对`mountDOMElement`这个方法做一些小小的改动: 
 ```ts
-/* shared/MyReactTypes.ts */
+/* MyReact/MyReactDOM.ts */
 
-import { createElement, createRef } from "react"
-
-export interface MyReactElement {
-  type: any,
-  props: { [key: string]: any },
-  key: any | null,
-  ref?: MyRef<any>;
-  component?: MyReactComponent;
-}
-
-export interface MyReactComponent {
-  [key: string]: any;
-}
-
-export type MyHTMLElement = HTMLElement & { __virtualDOM: MyReactElement } | HTMLInputElement & { __virtualDOM: MyReactElement }
-
-// createRef构造的对象
-export interface MyRefObject<T> {
-  readonly current: T | null;
-}
-// 函数式的ref
-export type MyRefCallback<T> = (instace: T) => {}
-
-// 现在可使用ref对象，ref回调和ref字符串的形式定义ref
-export type MyRef<T> = MyRefObject<T> | MyRefCallback<T> | String | null  
-
-```
-
-
-
-
-## 2. 渲染DOM元素 
-我们先用createElement来渲染几个DOM元素看看, 这里首先需要对DOM元素的类型进行判断——如果为文本类型，把文本放到`props.textContent`里面；如果是DOM元素，先用`document.createElement`创造元素，然后根据传进来的props键值对的key来分类型地添加DOM属性; 
-> 在创建DOM元素的同时我们还需要保存下渲染出这个DOM元素的虚拟DOM，这是之后Diff算法实现重要的一步.
-
-### 2.1 添加DOM元素
-```ts
 /**
  * 渲染原生DOM元素
  * @param virtualDOM 虚拟DOM
  * @param container 父容器 
  */
 export const mountDOMElement = (virtualDOM: MyReactElement, container: HTMLElement | null) => {
-  let newElement: any
-  const { type, props } = virtualDOM
-
-  // 为纯文本
-  if (type === 'text') {
-    newElement = document.createTextNode(props?.textContent)
-  }
-  // 为DOM元素
+  /* 省略 */ 
   else {
     // 创建元素
     newElement = document.createElement(type)
@@ -282,133 +207,336 @@ export const mountDOMElement = (virtualDOM: MyReactElement, container: HTMLEleme
     attachProps(virtualDOM, newElement)
     // 递归渲染子元素
     props?.children.forEach((child: MyReactElement) => {
-      mountElement(child, newElement)
+      // mountDOMElement(child, newElement)
+      mountElement(child, newElement) // 需要考虑到子元素是组件的情况
     })
   }
-  //* 创建DOM元素的时候记录下当前的虚拟DOM, 这个以后会用到
+  //* 创建DOM元素的时候记录下当前的虚拟DOM
   newElement.__virtualDOM = virtualDOM
-  // 创建完之后添加到父容器中
   container?.appendChild(newElement)
 }
 ```
-
-### 2.2 给DOM元素添加props属性
-
-在添加props属性的时候，需要判断下面几个特殊情况
-
-- 如果有事件属性，需要添加事件
-- 如果有有value或者checked属性直接赋值（无法直接使用setAttribute生成）
-- 如果有className属性，添加class样式
-- 如果有ref属性，这个以后处理
-
-除此之外的属性其他一律使用`Element.setAttribute()`方法添加
+这个mountElement方法, 其实就是把之前判断虚拟DOM类型然后渲染的代码分离出来: 
 ```ts
+/* MyReact/MyReactRender.ts */
 
 /**
- * 更新props属性
+ * 渲染方法 
  * @param virtualDOM 
- * @param element 
- */
-export const attachProps = (virtualDOM: MyReactElement, element: MyHTMLElement) => {
-  // 获取props键值对
-  const props: { [key: string]: any } = virtualDOM.props
-  const keys = Object.keys(props)
-
-  // 遍历属性
-  keys && keys.forEach((propName: string) => {
-    updateProp(propName, props[propName], element)
-  })
-}
-
-/**
- * 更新单个属性
- * @param propName 
- * @param propValue 
- * @param element 
+ * @param container 
  * @returns 
  */
-export const updateProp = (propName: string, propValue: any, element: MyHTMLElement) => {
-  // 如果是children 跳过
-  if (propName === 'children') return
-  // 事件以‘on’开头
-  if (propName.slice(0, 2) === 'on') {
-    const eventName = propName.toLocaleLowerCase().slice(2)
-    element.addEventListener(eventName, propValue)
-  }
-  // className 附加属性
-  else if (propName === 'className') {
-    element.setAttribute('class', propValue)
-  }
-  // ref 接受string或者回调函数
-  else if (propName === 'ref') {
-    //  
-  }
-  // value或者checked属性
-  else if (propName === 'value') {
-    // element.value
-    (element as HTMLInputElement).value = propValue
-  }
-  else if (propName === 'checked') {
-    (element as HTMLInputElement).checked = propValue
-  }
-  // 其他
-  else {
-    element.setAttribute(propName, propValue)
+export const mountElement = (virtualDOM: MyReactElement, container: MyHTMLElement) => {
+  if (!container) return
+  // 渲染组件还是渲染DOM元素
+  if (isFunction(virtualDOM.type)) {
+    // 渲染组件 
+    mountComponent(virtualDOM, container)
+  } else {
+    // 渲染原生DOM元素
+    console.log('Rendering DOM Element')
+    mountDOMElement(virtualDOM, container)
   }
 }
 ```
-### 2.3 实现渲染: `MyReact.render()`
-我们知道在React中render函数都是以`ReactDOM.render(<App/>, root)`这种形式出现的，第一个参数`<App/>`首先会被我们自定义的createElement经由Babel编译成虚拟DOM，第二个参数是父容器.那么仿造此种写法我们就可以实现一个简单的`render`:
+所以我们的`mountComponent`现在可以更精简的写成下面这样:
 ```ts
-export const render = (virtualDOM: MyReactElement, container: HTMLElement) => {
-  // 渲染原生DOM元素
-  mountDOMElement(virtualDOM, container)
+export const mountComponent = (virtualDOM: MyReactElement, container: HTMLElement) => {
+  // 获取构造函数和属性
+  const { type: C, props } = virtualDOM
+  let newVirtualDOM: MyReactElement
+  // 如果是类组件
+  if (isClassComponent(virtualDOM.type)) {
+    console.log('rendering class component')
+    // 创建实例并返回
+    const c = new virtualDOM.type()
+    newVirtualDOM = c.render(props || {} )
+  }
+  // 如果是函数组件 
+  else {
+    console.log('rendering functional component')
+    newVirtualDOM = C(props || {})
+  }
+
+  // 记录下虚拟DOM方便diff算法比较
+  container.__virtualDOM = newVirtualDOM
+  // 判断渲染出来的元素类型, 以此来决定递归渲染的类型
+  mountElement(newVirtualDOM, container)
 }
 
 ```
-现在我们就来实际测试一下结果: 
+
+
+## 5. 测试
+接下来我们可以测试下这套组件渲染逻辑在渲染多层组件的完成情况. 主要测试的有几点:
+
+* Todo为类组件, 渲染的是原生DOM元素
+* Todos为类组件, Todos会渲染多个Todo组件, 并同时传递来自App组件props和自己的props
+* App为函数是组件, 传递了props给Todos
+
+
+下面就是我们的demo代码: 
 
 ```ts
 /* demo/index.tsx */
-import React from "react";
-import * as MyReact from "../src/MyReact";
-import { MyHTMLElement } from "../src/shared/MyReactTypes";
-import './styles.scss'
 
-const vDOM = (
-  <div className="container">
-    <ul className="todos" ref="todos">
-      <li className="completed" onClick={() => alert('completed')}>createElement</li>
-      <li className="completed" onClick={() => alert('completed')} >rendering DOM</li>
-      <li className="ongoing" onClick={() => alert('ongoing')} >rendering Component</li>
-      <li className="todo" onClick={() => alert('todo')} >diff</li>
-      <li className="todo" onClick={() => alert('todo')} >state</li>
-    </ul>
-  </div>
-)
+// React.Component<P, S> 接受两个参数P = props和 S = state, 这里我只传了props
+export class Todo extends React.Component<{ task: string, completed?: boolean, event?: MouseEventHandler<HTMLLIElement> }> {
+  render() {
+    const { completed, task, event } = this.props
+    return (
+      <li className={completed ? 'completed' : 'ongoing'} onClick={event}>
+        {task}
+      </li>
+    )
+  }
+}
+// Todos 为函数式组件
+export const Todos = (props: { type: string }) => {
+  const { type } = props
+  const engList = (
+    <section className="todos eng" role="list">
+      <Todo task="createElement" completed={true} />
+      <Todo task="render" completed={true} />
+      <Todo task="diff" completed={false} />
+    </section>
+  )
+  const cnList = (
+    <section className="todos chi" role="list">
+      <Todo task="createElement" completed={true} />
+      <Todo task="render" completed={true} />
+      <Todo task="diff" completed={false} />
+      <Todo task="虚拟DOM" completed={true} />
+      <Todo task="渲染" completed={true} />
+      <Todo task="Diff算法" />
+    </section>
+  )
+  return type === 'one' ? engList : cnList
+}
+
+export const App = function (props: { type: string }) {
+  return (
+    <Todos type={props.type} />
+  )
+}
 
 const root = document.getElementById('app') as MyHTMLElement
-MyReact.render(vDOM, root)
+MyReact.render(<App type="two" />, root)
 ```
 
-为了测试props属性是否生效, 这段tsx中还需要加入了一些简单的样式和点击alert事件
+测试框架的选择建议使用jest, 只需要用到了jest-dom基本就可以覆盖上面的这段demo.
 
+### 5.1 使用Jest测试的准备工作
 
-所以在同目录的`styles.scss`中
-```scss
-.todos {
-  .completed {
-    color: CornflowerBlue;
-  }
+首先安装依赖: 
 
-  .ongoing {
-    color: DarkSalmon;
-  }
+* 安装jest: `yarn add -D jest babel-jest ts-node`
+* 安装jest测试库: `yarn add -D @testing-library/dom @testing-library/jest-dom`
+* 安装TS代码提示: `yarn add -D @types/jest`
+
+然后是`jest`的简单配置
+
+```ts
+/*  jest.config.ts */
+
+export default {
+  // 用V8引擎提供测试覆盖率
+  coverageProvider: "v8",
+  // 测试根目录, 这里模仿React全都写在根目录的__tests__这个文件夹下
+  roots: [
+    "<rootDir>/__tests__"
+  ],
+  // 自动查找后缀名
+  moduleFileExtensions: [
+    "js",
+    "jsx",
+    "ts",
+    "tsx",
+    "json",
+    "node"
+  ],
+  // 测试环境, 因为主要还是测试的DOM的渲染情况, 所以用的jsdom
+  testEnvironment: "jsdom",
+  // 指定转换器
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': '<rootDir>/node_modules/babel-jest',
+  },
+  // 转换器正则忽略
+  transformIgnorePatterns: [
+    '[/\\\\]node_modules[/\\\\].+\\.(js|jsx|ts|tsx)$',
+    '^.+\\.module\\.(css|sass|scss)$'
+  ]
 }
 
 ```
 
-如此一来, 打印在页面上的效果就会是这样的, 点击每一个节点, 发现下点击事件也是可以用的. 
+因为到时候的测试文件都是用Typescript写的, 所以在babel的配置里还需要在最后加上`@babel/preset-typescript`
 
-以上, 此小节结束. 
+```json
+{
+  "presets": [
+    "@babel/preset-env",
+    [
+      "@babel/preset-react",
+      {
+        "pragma": "MyReact.createElement"
+      }
+    ],
+    "@babel/preset-typescript"
+  ]
+}
+```
+
+> 更多有关React测试的实战, 请参考《试试前端自动化测试》这篇文章 →[传送门](https://juejin.cn/post/6894234532224958478#heading-1)
+
+
+### 5.2 编写单元测试
+
+针对demo中的两个组件`Todo`, `Todos`(忽略`App`), 我们可以写出下面简单的两个单元测试, 测试用例大致如下
+
+**Todo**
+
+主要测试的是
+* 能否把传入的*task*字符串输出到`<li>`这个元素中
+* 能否够根据*completed*这个字段的布尔值渲染不同的样式
+* 能否插入把传入的事件插入`<li>`元素的`eventListener`中
+
+```tsx 
+import React from 'react'
+import * as MyReact from "../src/MyReact";
+import { Todo } from '../demo'
+import '@testing-library/jest-dom'
+import { getByText } from '@testing-library/dom'
+
+let container: any
+
+beforeEach(() => {
+  container = document.createElement('div')
+  document.body.appendChild(container)
+
+})
+
+afterEach(() => {
+  document.body.removeChild(container)
+  container = null
+})
+
+describe('Todo组件', () => {
+  
+  describe('能够正确渲染待办项目名称', () => {
+    // 能够正确传递task属性
+    it('should render task correctly', () => {
+      MyReact.render(<Todo task='add testing' completed={false} />, container)
+      expect(getByText(container, 'add testing')).toBeInTheDocument()
+    })
+  })
+
+  describe('能够正确渲染样式', () => {
+    // 能够正确渲染样式 completed: false 
+    it('should render class correctly => completed: false', () => {
+      MyReact.render(<Todo task='add testing' completed={false} />, container)
+      expect(getByText(container, 'add testing')).toHaveClass('ongoing')
+    })
+    // 能够正确渲染样式 completed: true
+    it('should render class correctly => completed: true', () => {
+      MyReact.render(<Todo task='add testing' completed={true} />, container)
+      expect(getByText(container, 'add testing')).toHaveClass('completed')
+    })
+    // 能够正确渲染样式 completed: not given
+    it('should render class correctly => completed: not given', () => {
+      MyReact.render(<Todo task='add testing' />, container)
+      expect(getByText(container, 'add testing')).toHaveClass('ongoing')
+    })
+  })
+
+  describe('能够正确触发点击事件', () => {
+    it('should trigger click event correctly', () => {
+      // 创建一个mock方法
+      const clickSpy = jest.fn()
+
+      // 点击事件即为mock方法
+      MyReact.render(<Todo task='add testing' event={clickSpy} />, container)
+
+      // 触发点击事件
+      const todo = getByText(container, 'add testing')
+      todo.click()
+
+      expect(clickSpy).toHaveBeenCalled()
+    })
+  })
+})
+
+```
+
+**Todos**
+
+主要测试的是
+
+* 能否根据*type*这个字段分别渲染中文和英文的清单
+* 能否在同一个`div`中渲染多个`Todo`组件
+
+```tsx
+import React from 'react'
+import * as MyReact from "../src/MyReact";
+import { Todos } from '../demo'
+import '@testing-library/jest-dom'
+import { getByText, getByRole } from '@testing-library/dom'
+
+
+let container: any
+
+beforeEach(() => {
+  container = document.createElement('div')
+  document.body.appendChild(container)
+})
+
+afterEach(() => {
+  document.body.removeChild(container)
+  container = null
+})
+
+describe('Todos组件', () => {
+  describe('能够正确显示中文和英文列表', () => {
+    it('should diplay English list', () => {
+      MyReact.render(<Todos type="one" />, container)
+      expect(getByRole(container, 'list')).toHaveClass('eng')
+    })
+    it('should diplay Chinese list', () => {
+      MyReact.render(<Todos type="two" />, container)
+      expect(getByRole(container, 'list')).toHaveClass('chi')
+    })
+  })
+
+  describe('能够渲染多个Todo组件', () => {
+    it('Eng list should have 3 todos', () => {
+      MyReact.render(<Todos type="one" />, container)
+      expect(getByRole(container, 'list').childElementCount).toBe(3)
+    })
+
+    it('Chinese List should have 6 todos', () => {
+      MyReact.render(<Todos type="two" />, container)
+      expect(getByRole(container, 'list').childElementCount).toBe(6)
+    })
+  })
+})
+```
+
+### 5.3 If you don't care about testing
+
+如果你跳过了单元测试这个部分, 那就看下面这两张截图吧. 
+
+<div style="display: flex">
+  <img src="./public/images/eng-list.png" style="padding-right:2em;">
+  <img src="./public/images/chi-list.png">
+</div>
+
+
+## 总结
+
+在这一节里,我们实现了
+* 在渲染虚拟DOM的时候, 区分了组件和原生元素
+* 正确地渲染了函数式组件和类组件
+* 完善后的`render`方法顺利地通过了单元测试
+
+以上, 组件的渲染篇结束!  
 

@@ -20,10 +20,9 @@ export const createElement = (type: any, props: any, ...children: any): MyReactE
       return createElement('text', { textContent: child })
     }
   })
-  // props 中必须保存children信息 
+
   props = Object.assign({}, props, { children: childElements })
 
-  // 这两个属性后期会用到
   const key = props.key || null
   const ref = props.ref || null
 

@@ -6,6 +6,7 @@
       {
         "pragma": "MyReact.createElement"
       }
-    ]
+    ],
+    "@babel/preset-typescript"
   ]
 }

@@ -1,4 +1,7 @@
 import { MyHTMLElement, MyReactElement } from "../shared/MyReactTypes"
+import { mountElement } from "./MyReactRender"
+
+
 
 /**
  * 渲染原生DOM元素
@@ -21,27 +24,13 @@ export const mountDOMElement = (virtualDOM: MyReactElement, container: HTMLEleme
     attachProps(virtualDOM, newElement)
     // 递归渲染子元素
     props?.children.forEach((child: MyReactElement) => {
-      mountDOMElement(child, newElement)
+      // mountDOMElement(child, newElement) 删除, 只考虑到了原生DOM的场景
+      mountElement(child, newElement) // 需要考虑到子元素是组件的情况
     })
   }
   //* 创建DOM元素的时候记录下当前的虚拟DOM
   newElement.__virtualDOM = virtualDOM
   container?.appendChild(newElement)
-}
-
-/**
- * 更新DOM文本节点
- * @param virtualDOM 
- * @param oldVirtualDOM 
- * @param element 
- */
-export const updateText = (virtualDOM: MyReactElement, oldVirtualDOM: MyReactElement, element: MyHTMLElement) => {
-  if (virtualDOM.props.textContent !== oldVirtualDOM.props.textContent) {
-    // 更换文本
-    element.textContent = virtualDOM.props.textContent
-    // 储存为__virtualDOM
-    element.__virtualDOM = virtualDOM
-  }
 }
 
 /**
@@ -69,7 +58,9 @@ export const attachProps = (virtualDOM: MyReactElement, element: MyHTMLElement) 
  */
 export const updateProp = (propName: string, propValue: any, element: MyHTMLElement) => {
   // 如果是children 跳过
-  if (propName === 'children') return
+  if (propName === 'children') {
+    return
+  }
   // 事件以‘on’开头
   else if (propName.slice(0, 2) === 'on') {
     const eventName = propName.toLocaleLowerCase().slice(2)
