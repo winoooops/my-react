@@ -1,5 +1,7 @@
 import { MyHTMLElement, MyReactElement } from "../shared/MyReactTypes"
-import { mountElement } from "./MyReactRender"
+import { isClassComponent, isEqual, isFunction } from "../shared/utils"
+import { mountComponent } from "./MyReactComponent"
+import { diff, mountElement } from "./MyReactRender"
 
 
 
@@ -34,6 +36,59 @@ export const mountDOMElement = (virtualDOM: MyReactElement, container: HTMLEleme
 }
 
 /**
+ * 更新DOM元素  => 更新元素下面的属性值
+ * @param virtualDOM 
+ * @param oldVirtualDOM 
+ * @param element 
+ */
+export const updateDOMElement = (virtualDOM: MyReactElement, oldVirtualDOM: MyReactElement, element: MyHTMLElement) => {
+  const propsKeys = Object.keys(virtualDOM.props)
+  const oldProps = oldVirtualDOM.props
+  const oldPropsKeys = Object.keys(oldProps)
+  propsKeys.forEach((propName: string) => {
+    // 如果是文本节点
+    if (propName === 'textContent') {
+      updateText(virtualDOM, oldVirtualDOM, element)
+    }
+    // 递归更新子元素
+    else if (propName === 'children') {
+      updateChildren(virtualDOM, oldVirtualDOM, element)
+    }
+    // 更新其他属性
+    else {
+      updateProp(propName, virtualDOM.props[propName], element)
+    }
+  })
+
+
+  oldPropsKeys.length && oldPropsKeys.forEach((oldKey: string) => {
+    // 如果属性被删除
+    if (!propsKeys.includes(oldKey)) {
+      removeProp(oldKey, oldProps[oldKey], element)
+    }
+  })
+
+  // 更新删除完毕后记录下当前的虚拟DOM
+  element.__virtualDOM = virtualDOM
+  // return element
+}
+
+/**
+ * 更新DOM文本节点
+ * @param virtualDOM 
+ * @param oldVirtualDOM 
+ * @param element 
+ */
+export const updateText = (virtualDOM: MyReactElement, oldVirtualDOM: MyReactElement, element: MyHTMLElement) => {
+  if (virtualDOM.props.textContent !== oldVirtualDOM.props.textContent) {
+    // 更换文本
+    element.textContent = virtualDOM.props.textContent
+    // 储存为__virtualDOM
+    element.__virtualDOM = virtualDOM
+  }
+}
+
+/**
  * 更新props属性
  * @param virtualDOM 
  * @param element 
@@ -59,7 +114,23 @@ export const attachProps = (virtualDOM: MyReactElement, element: MyHTMLElement) 
 export const updateProp = (propName: string, propValue: any, element: MyHTMLElement) => {
   // 如果是children 跳过
   if (propName === 'children') {
-    return
+    // 如果遍历的虚拟DOM是组件的话, 需要更新这个虚拟DOM下面的component属性
+    propValue.map((child: MyReactElement) => {
+      const { type: C, props } = child
+      // 如果为组件, 需要给children里面的元素增加上component这个属性, 方便Diff算法比较
+      if (isFunction(C)) {
+        if (isClassComponent(child.type)) {
+          return Object.assign(child, { component: new C(props || {}) })
+        } else {
+          return Object.assign(child, { component: C(props || {}) })
+        }
+      }
+      // 如果为DOM元素 
+      else {
+        return child
+      }
+    })
+    console.log(propValue);
   }
   // 事件以‘on’开头
   else if (propName.slice(0, 2) === 'on') {
@@ -85,5 +156,50 @@ export const updateProp = (propName: string, propValue: any, element: MyHTMLElem
   // 其他
   else {
     element.setAttribute(propName, propValue)
+  }
+}
+
+
+/**
+ * 更新子元素 
+ * @param virtualDOM 
+ * @param oldVirtualDOM 
+ * @param element 
+ */
+export const updateChildren = (virtualDOM: MyReactElement, oldVirtualDOM: MyReactElement, element: MyHTMLElement) => {
+  const { children } = virtualDOM.props
+  console.log(children);
+  const { children: oldChildren } = oldVirtualDOM.props
+  console.log(oldChildren);
+  // 如果有子元素
+  // Todo 应该用key来查找, 现在先用index查找
+  children?.forEach((newElement: MyReactElement, index: number) => {
+    console.log(index);
+    console.log(newElement);
+    console.log('oldElement: ', oldChildren[index]);
+    const oldElement = oldChildren[index]
+    // 如果不存在, 直接添加
+    if (!oldElement) {
+      mountElement(newElement, element)
+    }
+    // 如果存在, 递归Diff
+    else {
+      diff(newElement, element, element.childNodes[index] as MyHTMLElement)
+    }
+  });
+}
+
+/**
+ * 删除属性 
+ * @param propName 
+ * @param propValue 
+ * @param element 
+ */
+export const removeProp = (propName: string, propValue: any, element: MyHTMLElement) => {
+  if (propName === 'children') return
+  if (propName.toLowerCase().slice(0, 2) === 'on') {
+    element.removeEventListener(propName.toLowerCase().slice(2), propValue)
+  } else {
+    element.removeAttribute(propName)
   }
 }

@@ -1,5 +1,6 @@
 import React, { MouseEventHandler } from "react";
 import * as MyReact from "../src/MyReact";
+import { mountDOMElement, updateDOMElement, updateText } from "../src/MyReact/MyReactDOM";
 import { MyHTMLElement } from "../src/shared/MyReactTypes";
 import { isFunction } from "../src/shared/utils";
 import './styles.scss'
@@ -35,17 +36,17 @@ class Welcome extends React.Component {
   }
 }
 
-const greeting = Greeting()
-const welcome = new Welcome({}).render()
+// const greeting = Greeting()
+// const welcome = new Welcome({}).render()
 
-console.log(Greeting);
-// console.log(isFunction(Greeting.type))
-console.log(isFunction(greeting.type))
+// console.log(Greeting);
+// // console.log(isFunction(Greeting.type))
+// console.log(isFunction(greeting.type))
 
-console.log(Welcome);
-// console.log(isFunction(Welcome.type))
-console.log(isFunction(welcome.type))
-console.log(isFunction(vDOM.type))
+// console.log(Welcome);
+// // console.log(isFunction(Welcome.type))
+// console.log(isFunction(welcome.type))
+// console.log(isFunction(vDOM.type))
 
 // React.Component<P, S> 接受两个参数P = props和 S = state, 这里我只传了props
 export class Todo extends React.Component<{ task: string, completed?: boolean, event?: MouseEventHandler<HTMLLIElement> }> {
@@ -59,26 +60,30 @@ export class Todo extends React.Component<{ task: string, completed?: boolean, e
   }
 }
 
-export const Todos = (props: { type: string }) => {
-  const { type } = props
-  const engList = (
-    <section className="todos eng" role="list">
-      <Todo task="createElement" completed={true} />
-      <Todo task="render" completed={true} />
-      <Todo task="diff" completed={false} />
-    </section>
-  )
-  const cnList = (
-    <section className="todos chi" role="list">
-      <Todo task="createElement" completed={true} />
-      <Todo task="render" completed={true} />
-      <Todo task="diff" completed={false} />
-      <Todo task="虚拟DOM" completed={true} />
-      <Todo task="渲染" completed={true} />
-      <Todo task="Diff算法" />
-    </section>
-  )
-  return type === 'one' ? engList : cnList
+export class Todos extends React.Component<{ type: string }> {
+
+  render() {
+    const { type } = this.props
+    const engList = (
+      <section className="todos eng" role="list">
+        <Todo task="createElement" completed={true} />
+        <Todo task="render" completed={true} />
+        <Todo task="diff" completed={false} />
+      </section>
+    )
+    const cnList = (
+      <section className="todos chi" role="list">
+        <Todo task="createElement" completed={true} />
+        <Todo task="render" completed={true} />
+        <Todo task="Diff" completed={true} />
+        <Todo task="虚拟DOM" completed={true} />
+        <Todo task="渲染" completed={true} />
+        <Todo task="Diff算法" />
+      </section>
+    )
+    return type === 'one' ? engList : cnList
+  }
+
 }
 
 export const App = function (props: { type: string }) {
@@ -87,6 +92,19 @@ export const App = function (props: { type: string }) {
   )
 }
 
+
 const root = document.getElementById('app') as MyHTMLElement
-MyReact.render(<App type="one" />, root)
-// MyReact.render(<Todo task="add test" completed={false} />, root)
+// MyReact.render(<Todos type="one" />, root)
+
+// setTimeout(() => {
+//   MyReact.render(<Todos type="two" />, root)
+// }, 5000);
+
+
+let oldVirtualDOM = <p>old</p>
+let newVirtualDOM = <p>new</p>
+console.log(MyReact)
+mountDOMElement(oldVirtualDOM, root)
+setTimeout(() => {
+  updateDOMElement(newVirtualDOM, oldVirtualDOM, root)
+}, 3000);

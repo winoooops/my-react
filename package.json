@@ -23,6 +23,7 @@
     "clean-webpack-plugin": "^4.0.0",
     "css-loader": "^6.5.1",
     "html-webpack-plugin": "^5.5.0",
+    "identity-obj-proxy": "^3.0.0",
     "jest": "^27.4.7",
     "node-sass": "^7.0.1",
     "react-transform-hmr": "^1.0.4",

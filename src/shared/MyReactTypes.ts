@@ -6,6 +6,7 @@ export interface MyReactElement {
   props: { [key: string]: any },
   key: any | null,
   ref?: MyRef<any>;
+  component?: MyReactComponent;
 }
 
 export interface MyReactComponent {

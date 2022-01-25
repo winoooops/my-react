@@ -9,7 +9,6 @@ let container: any
 beforeEach(() => {
   container = document.createElement('div')
   document.body.appendChild(container)
-
 })
 
 afterEach(() => {
@@ -23,6 +22,7 @@ describe('Todo 组件', () => {
   describe('能够正确渲染待办项目名称', () => {
     it('should render task correctly', () => {
       MyReact.render(<Todo task='add testing' completed={false} />, container)
+      console.log(container)
       expect(getByText(container, 'add testing')).toBeInTheDocument()
     })
   })
